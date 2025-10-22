@@ -7,29 +7,27 @@ use Illuminate\Http\JsonResponse;
 trait ApiStatus
 {
 
-    public function StatusSuccess($data, $message = "Successful", $code = JsonResponse::HTTP_OK)
+    public function successResponse($data = [], $message = "Success", $code = 200)
     {
-        return response()->json([
-            'data' => $data,
-            'message' => $message,
-            'code' => $code
-        ]);
+        return response()->json(
+            [
+                'success' => true,
+                'message' => $message,
+                'data' => $data
+            ],
+            $code
+        );
     }
 
-    public function StatusError($errors, $message = "Error", $code = JsonResponse::HTTP_BAD_REQUEST)
-    {
-        return response()->json([
-            'errors' => $errors,
-            'message' => $message,
-            'code' => $code
-        ]);
-    }
 
-    public function StatusResource($message = "Successful", $code = JsonResponse::HTTP_OK)
+    public function errorResponse($message = "Something went wrong", $code = 500)
     {
-        return [
-            'message' => $message,
-            'code' => $code
-        ];
+        return response()->json(
+            [
+                'success' => false,
+                'message' => $message,
+            ],
+            $code
+        );
     }
 }

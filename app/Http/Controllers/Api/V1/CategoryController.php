@@ -25,8 +25,21 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         try {
-            $datas = Category::paginate($request->input('paginate' , 4));
-            return response()->json(['data'=>$datas,'message' => "Data Fetch Successfully"], 200);
+            $search = $request->query('search');
+            $per_page = $request->query('per_page', 10);
+
+            $query = Category::query();
+
+            if ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            }
+
+            $datas = $query->paginate($per_page);
+
+            if ($datas->isEmpty()) {
+                return $this->successResponse([], 'No categories found');
+            }
+            return $this->successResponse($datas, 'Categories fetched successfully');
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -36,7 +49,7 @@ class CategoryController extends Controller
     {
         try {
             $data = Category::create($request->validated());
-            return response()->json(['data'=>$data,'message' => 'Data Insert Successfully'], 201);
+            return response()->json(['data' => $data, 'message' => 'Data Insert Successfully'], 201);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -45,7 +58,7 @@ class CategoryController extends Controller
     public function show(Category $category)
     {
         try {
-            return response()->json(['data'=>$category,'message' => "Data Show Successfully"], 200);
+            return response()->json(['data' => $category, 'message' => "Data Show Successfully"], 200);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -55,7 +68,7 @@ class CategoryController extends Controller
     {
         try {
             $category->update($request->validated());
-            return response()->json(['data' => $category,'message' => 'Data Update Successfully'], 200);
+            return response()->json(['data' => $category, 'message' => 'Data Update Successfully'], 200);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -65,7 +78,7 @@ class CategoryController extends Controller
     {
         try {
             $category->delete();
-            return response()->json(['data'=>$category,'message' => 'Data Delete Successfully'], 200);
+            return response()->json(['data' => $category, 'message' => 'Data Delete Successfully'], 200);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
