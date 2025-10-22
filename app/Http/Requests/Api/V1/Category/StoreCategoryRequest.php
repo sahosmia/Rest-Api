@@ -23,6 +23,7 @@ class StoreCategoryRequest extends FormRequest
     {
         return [
             'name' => ["required", "unique:categories,name", "between:3,20"],
+            'slug' => ["required", "unique:categories,slug", "between:3,20"],
             "description" => ["nullable", "min:3"]
         ];
     }

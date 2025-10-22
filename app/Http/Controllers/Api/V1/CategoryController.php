@@ -9,6 +9,7 @@ use App\Http\Resources\V1\CategoryResource;
 use App\Models\Category;
 use App\Repositories\Contracts\CategoryRepository;
 use App\Traits\ApiStatus;
+use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
@@ -21,11 +22,11 @@ class CategoryController extends Controller
         $this->categoryRepository = $categoryRepository;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $datas = $this->categoryRepository->all();
-            return CategoryResource::collection($datas)->additional($this->StatusResource());
+            $datas = Category::paginate($request->input('paginate' , 4));
+            return response()->json(['data'=>$datas,'message' => "Data Fetch Successfully"], 200);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -34,8 +35,8 @@ class CategoryController extends Controller
     public function store(StoreCategoryRequest $request)
     {
         try {
-            $category = $this->categoryRepository->create($request->validated());
-            return (new CategoryResource($category))->additional($this->StatusSuccess([], 'Data Store Successfuly'));
+            $data = Category::create($request->validated());
+            return response()->json(['data'=>$data,'message' => 'Data Insert Successfully'], 201);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -44,7 +45,7 @@ class CategoryController extends Controller
     public function show(Category $category)
     {
         try {
-            return (new CategoryResource($category))->additional($this->StatusResource());
+            return response()->json(['data'=>$category,'message' => "Data Show Successfully"], 200);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -53,8 +54,8 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category)
     {
         try {
-            $updatedCategory = $this->categoryRepository->update($category->id, $request->validated());
-            return $this->StatusSuccess($updatedCategory, 'Data Update Successfuly');
+            $category->update($request->validated());
+            return response()->json(['data' => $category,'message' => 'Data Update Successfully'], 200);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
@@ -63,8 +64,8 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         try {
-            $this->categoryRepository->delete($category->id);
-            return $this->StatusSuccess([], 'Data Delete Successfuly');
+            $category->delete();
+            return response()->json(['data'=>$category,'message' => 'Data Delete Successfully'], 200);
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }
