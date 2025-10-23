@@ -5,14 +5,16 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Blog\StoreBlogRequest;
 use App\Http\Requests\Api\V1\Blog\UpdateBlogRequest;
+use App\Http\Resources\V1\BlogCollection;
 use App\Http\Resources\V1\BlogResource;
 use App\Models\Blog;
 use App\Repositories\Contracts\BlogRepository;
-use App\Traits\ApiStatus;
+use App\Traits\ApiResponse;
+use Illuminate\Http\Request;
 
 class BlogController extends Controller
 {
-    use ApiStatus;
+    use ApiResponse;
 
     protected $blogRepository;
 
@@ -21,36 +23,79 @@ class BlogController extends Controller
         $this->blogRepository = $blogRepository;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $datas = $this->blogRepository->all();
-            return BlogResource::collection($datas)->additional($this->StatusResource());
-        } catch (\Exception $execption) {
-            return $this->StatusError($execption->getMessage());
+            // Query parameters
+            $search = $request->query('search');
+            $per_page = $request->query('per_page', 10);
+            $created_by = $request->query('created_by');
+            $relationsParam = $request->query('with'); // e.g. category,user,tags
+
+            // Initialize query
+            $query = Blog::query();
+
+            // Search filter
+            if ($search) {
+                $query->where('title', 'like', "%{$search}%");
+            }
+
+            // Created by filter
+            if ($created_by) {
+                $query->where('user_id', $created_by);
+            }
+
+            // Eager load relations safely
+            if ($relationsParam) {
+                $relations = explode(',', $relationsParam);
+                // Optional: validate relation names here
+                $query->with($relations);
+            }
+
+            // Active blogs only
+            $query->active(); // assumes scopeActive() exists
+
+            // Paginate
+            $blogs = $query->paginate($per_page);
+
+            // Return ResourceCollection (pagination-safe)
+            return BlogResource::collection($blogs)
+                ->additional([
+                    'success' => true,
+                    'message' => $blogs->isEmpty() ? 'No blogs found' : 'Blogs fetched successfully'
+                ]);
+        } catch (\Exception $exception) {
+            return $this->errorResponse($exception->getMessage());
         }
     }
+
+
 
     public function store(StoreBlogRequest $request)
     {
         try {
             $data = $request->validated();
-            $data['user_id'] = $request->user()->id;
 
-            $blog = $this->blogRepository->create($data);
-            if ($request->tags) {
-                $this->blogRepository->attachTags($blog, $request->tags);
-            }
-            return (new BlogResource($blog->load(['tags', 'user'])))->additional($this->StatusSuccess([], 'Data Store Successfuly'));
+            $blog = Blog::create($data);
+            
+
+            // if ($request->tags) {
+            //     $this->blogRepository->attachTags($blog, $request->tags);
+            // }
+            // return (new BlogResource($blog->load(['tags', 'user'])))->additional($this->StatusSuccess([], 'Data Store Successfuly'));
+            $data = $blog->load(['tags', 'user']);
+            return $this->successResponse($data, 'Data Store Successfuly');
         } catch (\Exception $execption) {
-            return $this->StatusError($execption->getMessage());
+            // return $this->StatusError($execption->getMessage());
+            return $this->errorResponse($execption->getMessage());
         }
     }
 
     public function show(Blog $blog)
     {
         try {
-            return (new BlogResource($blog->load('tags')))->additional($this->StatusResource());
+            return new BlogResource($blog->load(['category', 'tags', 'comments', 'user']));
+
         } catch (\Exception $execption) {
             return $this->StatusError($execption->getMessage());
         }

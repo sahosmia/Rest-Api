@@ -19,10 +19,11 @@ class BlogResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'category_id' => ['id' => optional($this->category)->id, 'title' => optional($this->category)->title],
+            'category' => new CategoryResource($this->whenLoaded('category')),
             'description' => $this->description,
             'photo' => $this->photo,
             'tags' => TagResource::collection($this->whenLoaded('tags')),
+            'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'author' => new UserResource($this->whenLoaded('user')),
         ];
     }

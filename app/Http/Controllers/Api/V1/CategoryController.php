@@ -8,12 +8,12 @@ use App\Http\Requests\Api\V1\Category\UpdateCategoryRequest;
 use App\Http\Resources\V1\CategoryResource;
 use App\Models\Category;
 use App\Repositories\Contracts\CategoryRepository;
-use App\Traits\ApiStatus;
+use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    use ApiStatus;
+    use ApiResponse;
 
     protected $categoryRepository;
 
@@ -28,20 +28,22 @@ class CategoryController extends Controller
             $search = $request->query('search');
             $per_page = $request->query('per_page', 10);
 
-            $query = Category::query();
+
+            $query = Category::query()->active();
+
 
             if ($search) {
-                $query->where('name', 'like', '%' . $search . '%');
+                $query->where('title', 'like', '%' . $search . '%');
             }
+
+
+            $query->with(['blogs:category_id,title,slug']);
 
             $datas = $query->paginate($per_page);
 
-            if ($datas->isEmpty()) {
-                return $this->successResponse([], 'No categories found');
-            }
-            return $this->successResponse($datas, 'Categories fetched successfully');
+            
         } catch (\Exception $execption) {
-            return $this->StatusError($execption->getMessage());
+            return $this->errorResponse($execption->getMessage());
         }
     }
 
