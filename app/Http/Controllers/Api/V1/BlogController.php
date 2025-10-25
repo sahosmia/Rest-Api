@@ -11,106 +11,68 @@ use App\Models\Blog;
 use App\Repositories\Contracts\BlogRepository;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class BlogController extends Controller
 {
     use ApiResponse;
 
-    protected $blogRepository;
-
-    public function __construct(BlogRepository $blogRepository)
+    public function __construct(protected BlogRepository $blogRepository)
     {
-        $this->blogRepository = $blogRepository;
+        //
     }
 
     public function index(Request $request)
     {
         try {
-            // Query parameters
-            $search = $request->query('search');
-            $per_page = $request->query('per_page', 10);
-            $created_by = $request->query('created_by');
-            $relationsParam = $request->query('with'); // e.g. category,user,tags
-
-            // Initialize query
-            $query = Blog::query();
-
-            // Search filter
-            if ($search) {
-                $query->where('title', 'like', "%{$search}%");
-            }
-
-            // Created by filter
-            if ($created_by) {
-                $query->where('user_id', $created_by);
-            }
-
-            // Eager load relations safely
-            if ($relationsParam) {
-                $relations = explode(',', $relationsParam);
-                // Optional: validate relation names here
-                $query->with($relations);
-            }
-
-            // Active blogs only
-            $query->active(); // assumes scopeActive() exists
-
-            // Paginate
-            $blogs = $query->paginate($per_page);
-
-            // Return ResourceCollection (pagination-safe)
-            return BlogResource::collection($blogs)
-                ->additional([
-                    'success' => true,
-                    'message' => $blogs->isEmpty() ? 'No blogs found' : 'Blogs fetched successfully'
-                ]);
+            $blogs = $this->blogRepository->paginate(
+                $request->query('per_page', 10),
+                $request->query('search'),
+                $request->query('created_by'),
+                $request->query('with')
+            );
+            return new BlogCollection($blogs);
         } catch (\Exception $exception) {
-            return $this->errorResponse($exception->getMessage());
+            Log::error($exception);
+            return $this->errorResponse('Failed to retrieve blogs.');
         }
     }
-
-
 
     public function store(StoreBlogRequest $request)
     {
         try {
-            $data = $request->validated();
-
-            $blog = Blog::create($data);
-            
-
-            // if ($request->tags) {
-            //     $this->blogRepository->attachTags($blog, $request->tags);
-            // }
-            // return (new BlogResource($blog->load(['tags', 'user'])))->additional($this->StatusSuccess([], 'Data Store Successfuly'));
-            $data = $blog->load(['tags', 'user']);
-            return $this->successResponse($data, 'Data Store Successfuly');
-        } catch (\Exception $execption) {
-            // return $this->StatusError($execption->getMessage());
-            return $this->errorResponse($execption->getMessage());
+            $blog = $this->blogRepository->create($request->validated());
+            if ($request->has('tags')) {
+                $this->blogRepository->attachTags($blog, $request->tags);
+            }
+            return $this->successResponse(new BlogResource($blog->load(['tags', 'user'])), 'Blog created successfully.', 201);
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to create blog.');
         }
     }
 
     public function show(Blog $blog)
     {
         try {
-            return new BlogResource($blog->load(['category', 'tags', 'comments', 'user']));
-
-        } catch (\Exception $execption) {
-            return $this->StatusError($execption->getMessage());
+            return $this->successResponse(new BlogResource($blog->load(['category', 'tags', 'comments', 'user'])), 'Blog retrieved successfully.');
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to retrieve blog.');
         }
     }
 
     public function update(UpdateBlogRequest $request, Blog $blog)
     {
         try {
-            $this->blogRepository->update($blog->id, $request->validated());
-            if ($request->tags) {
-                $this->blogRepository->syncTags($blog, $request->tags);
+            $updatedBlog = $this->blogRepository->update($blog->id, $request->validated());
+            if ($request->has('tags')) {
+                $this->blogRepository->syncTags($updatedBlog, $request->tags);
             }
-            return $this->StatusSuccess($blog->fresh()->load('tags'), 'Data Update Successfuly');
-        } catch (\Exception $execption) {
-            return $this->StatusError($execption->getMessage());
+            return $this->successResponse(new BlogResource($updatedBlog->load('tags')), 'Blog updated successfully.');
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to update blog.');
         }
     }
 
@@ -118,9 +80,21 @@ class BlogController extends Controller
     {
         try {
             $this->blogRepository->delete($blog->id);
-            return $this->StatusSuccess([], 'Data Delete Successfuly');
-        } catch (\Exception $execption) {
-            return $this->StatusError($execption->getMessage());
+            return $this->successResponse(null, 'Blog deleted successfully.', 204);
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to delete blog.');
+        }
+    }
+
+    public function list()
+    {
+        try {
+            $data = $this->blogRepository->allForList();
+            return $this->successResponse($data, 'Blogs list retrieved successfully.');
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to retrieve blogs list.');
         }
     }
 }

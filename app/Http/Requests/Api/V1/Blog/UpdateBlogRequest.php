@@ -20,7 +20,7 @@ class UpdateBlogRequest extends FormRequest
         return [
             'title' => ["required", "between:3,20"],
             "category_id" => ["required"],
-            "photo" => ["required",],
+            "photo" => ["sometimes", "image", "max:2048"],
             "description" => ["nullable", "min:3"],
             'tags' => 'sometimes|array',
             'tags.*' => 'exists:tags,id',

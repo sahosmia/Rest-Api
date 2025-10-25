@@ -11,6 +11,9 @@ use App\Repositories\Eloquent\CategoryRepositoryEloquent;
 use App\Repositories\Eloquent\CommentRepositoryEloquent;
 use App\Repositories\Eloquent\TagRepositoryEloquent;
 use Illuminate\Support\ServiceProvider;
+use App\Repositories\Contracts\UserRepository;
+use App\Repositories\Eloquent\UserRepositoryEloquent;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CategoryRepository::class, CategoryRepositoryEloquent::class);
         $this->app->bind(TagRepository::class, TagRepositoryEloquent::class);
         $this->app->bind(CommentRepository::class, CommentRepositoryEloquent::class);
+                $this->app->bind(UserRepository::class, UserRepositoryEloquent::class);
+
     }
 
     /**

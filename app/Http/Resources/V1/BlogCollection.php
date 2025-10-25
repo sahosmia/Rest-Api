@@ -14,9 +14,20 @@ class BlogCollection extends ResourceCollection
      */
     public function toArray(Request $request): array
     {
-        return [
-            'data' => $this->collection,
+        return parent::toArray($request);
+    }
 
+    /**
+     * Get additional data that should be returned with the resource array.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array<string, mixed>
+     */
+    public function with(Request $request): array
+    {
+        return [
+            'success' => true,
+            'message' => 'Blogs retrieved successfully.',
         ];
     }
 }

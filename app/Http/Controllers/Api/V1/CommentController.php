@@ -5,58 +5,86 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Comment\StoreCommentRequest;
 use App\Http\Requests\Api\V1\Comment\UpdateCommentRequest;
+use App\Http\Resources\V1\CommentCollection;
 use App\Http\Resources\V1\CommentResource;
 use App\Models\Blog;
 use App\Models\Comment;
 use App\Repositories\Contracts\CommentRepository;
+use App\Traits\ApiResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CommentController extends Controller
 {
-    protected $commentRepository;
+    use ApiResponse;
 
-    public function __construct(CommentRepository $commentRepository)
+    public function __construct(protected CommentRepository $commentRepository)
     {
-        $this->commentRepository = $commentRepository;
+        //
     }
 
-    public function index(Blog $blog)
+    public function index(Request $request, Blog $blog)
     {
-        return CommentResource::collection($blog->comments()->with('user')->paginate(25));
+        try {
+            $comments = $this->commentRepository->paginateForBlog(
+                $blog,
+                $request->query('per_page', 10),
+                $request->query('with')
+            );
+            return new CommentCollection($comments);
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to retrieve comments.');
+        }
     }
 
     public function store(StoreCommentRequest $request, Blog $blog)
     {
-        $comment = $this->commentRepository->create([
-            'blog_id' => $blog->id,
-            'user_id' => Auth::id(),
-            'body' => $request->body,
-            'parent_id' => $request->parent_id,
-        ]);
+        try {
+            $data = $request->validated();
+            $data['blog_id'] = $blog->id;
+            $data['user_id'] = Auth::id();
 
-        return new CommentResource($comment);
+            $comment = $this->commentRepository->create($data);
+            return $this->successResponse(new CommentResource($comment), 'Comment created successfully.', 201);
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to create comment.');
+        }
     }
 
     public function show(Comment $comment)
     {
-        return new CommentResource($comment->load('user'));
+        try {
+            return $this->successResponse(new CommentResource($comment->load('user', 'blog')), 'Comment retrieved successfully.');
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to retrieve comment.');
+        }
     }
 
     public function update(UpdateCommentRequest $request, Comment $comment)
     {
-        $this->authorize('update', $comment);
-
-        $this->commentRepository->update($comment->id, $request->validated());
-
-        return new CommentResource($comment->fresh());
+        try {
+            $this->authorize('update', $comment);
+            $updatedComment = $this->commentRepository->update($comment->id, $request->validated());
+            return $this->successResponse(new CommentResource($updatedComment), 'Comment updated successfully.');
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to update comment.');
+        }
     }
 
     public function destroy(Comment $comment)
     {
-        $this->authorize('delete', $comment);
-
-        $this->commentRepository->delete($comment->id);
-
-        return response()->noContent();
+        try {
+            $this->authorize('delete', $comment);
+            $this->commentRepository->delete($comment->id);
+            return $this->successResponse(null, 'Comment deleted successfully.', 204);
+        } catch (\Exception $exception) {
+            Log::error($exception);
+            return $this->errorResponse('Failed to delete comment.');
+        }
     }
 }

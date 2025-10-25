@@ -40,4 +40,14 @@ class BaseRepositoryEloquent implements BaseRepository
     {
         return $this->model->destroy($id);
     }
+
+    public function paginate($perPage = 10, $search = null)
+    {
+        return $this->model->query()->paginate($perPage);
+    }
+
+    public function allForList(string $displayColumn = 'title')
+    {
+        return $this->model->query()->select('id', $displayColumn)->get();
+    }
 }

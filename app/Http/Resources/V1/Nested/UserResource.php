@@ -1,23 +1,18 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\V1\Nested;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class TagResource extends JsonResource
+class UserResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'slug' => $this->slug,
+            'email' => $this->email, // Keeping email as it can be useful
         ];
     }
 }

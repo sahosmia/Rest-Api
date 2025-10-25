@@ -5,7 +5,7 @@ namespace App\Http\Resources\V1;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
-class CategoryCollection extends ResourceCollection
+class UserCollection extends ResourceCollection
 {
     /**
      * Transform the resource collection into an array.
@@ -27,7 +27,7 @@ class CategoryCollection extends ResourceCollection
     {
         return [
             'success' => true,
-            'message' => 'Categories retrieved successfully.',
+            'message' => 'Users retrieved successfully.',
         ];
     }
 }

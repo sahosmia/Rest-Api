@@ -2,19 +2,19 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Category;
-use App\Repositories\Contracts\CategoryRepository;
+use App\Models\User;
+use App\Repositories\Contracts\UserRepository;
 
-class CategoryRepositoryEloquent extends BaseRepositoryEloquent implements CategoryRepository
+class UserRepositoryEloquent extends BaseRepositoryEloquent implements UserRepository
 {
-    public function __construct(Category $model)
+    public function __construct(User $model)
     {
         parent::__construct($model);
     }
 
     public function paginate($perPage = 10, $search = null, $with = null)
     {
-        $query = $this->model->query()->active();
+        $query = $this->model->query();
 
         if ($with) {
             $relations = explode(',', $with);
@@ -22,7 +22,7 @@ class CategoryRepositoryEloquent extends BaseRepositoryEloquent implements Categ
         }
 
         if ($search) {
-            $query->where('title', 'like', '%' . $search . '%');
+            $query->where('name', 'like', '%' . $search . '%');
         }
 
         return $query->paginate($perPage);

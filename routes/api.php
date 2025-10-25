@@ -38,11 +38,18 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('categories/list', [CategoryController::class, 'list'])->name('categories.list');
         Route::apiResource('categories', CategoryController::class);
 
+        Route::get('blogs/list', [BlogController::class, 'list'])->name('blogs.list');
         Route::apiResource('blogs', BlogController::class);
+
+        Route::get('tags/list', [TagController::class, 'list'])->name('tags.list');
         Route::apiResource('tags', TagController::class);
+
+        Route::get('users/list', [UserController::class, 'list'])->name('users.list');
         Route::apiResource('users', UserController::class);
+        
         Route::apiResource('blogs.comments', CommentController::class)->shallow();
     });
 });
