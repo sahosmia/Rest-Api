@@ -12,8 +12,6 @@ use App\Models\Comment;
 use App\Repositories\Contracts\CommentRepository;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class CommentController extends Controller
 {
@@ -26,65 +24,39 @@ class CommentController extends Controller
 
     public function index(Request $request, Blog $blog)
     {
-        try {
-            $comments = $this->commentRepository->paginateForBlog(
-                $blog,
-                $request->query('per_page', 10),
-                $request->query('with')
-            );
-            return new CommentCollection($comments);
-        } catch (\Exception $exception) {
-            Log::error($exception);
-            return $this->errorResponse('Failed to retrieve comments.');
-        }
+        $comments = $this->commentRepository->paginateForBlog(
+            $blog,
+            $request->query('per_page', 10),
+            $request->query('with')
+        );
+        return new CommentCollection($comments);
     }
 
     public function store(StoreCommentRequest $request, Blog $blog)
     {
-        try {
-            $data = $request->validated();
-            $data['blog_id'] = $blog->id;
-            $data['user_id'] = Auth::id();
+        $data = $request->validated();
+        $data['blog_id'] = $blog->id;
 
-            $comment = $this->commentRepository->create($data);
-            return $this->successResponse(new CommentResource($comment), 'Comment created successfully.', 201);
-        } catch (\Exception $exception) {
-            Log::error($exception);
-            return $this->errorResponse('Failed to create comment.');
-        }
+        $comment = $this->commentRepository->create($data);
+        return $this->successResponse(new CommentResource($comment), 'Comment created successfully.', 201);
     }
 
     public function show(Comment $comment)
     {
-        try {
-            return $this->successResponse(new CommentResource($comment->load('user', 'blog')), 'Comment retrieved successfully.');
-        } catch (\Exception $exception) {
-            Log::error($exception);
-            return $this->errorResponse('Failed to retrieve comment.');
-        }
+        return $this->successResponse(new CommentResource($comment->load(['user', 'blog'])), 'Comment retrieved successfully.');
     }
 
     public function update(UpdateCommentRequest $request, Comment $comment)
     {
-        try {
-            $this->authorize('update', $comment);
-            $updatedComment = $this->commentRepository->update($comment->id, $request->validated());
-            return $this->successResponse(new CommentResource($updatedComment), 'Comment updated successfully.');
-        } catch (\Exception $exception) {
-            Log::error($exception);
-            return $this->errorResponse('Failed to update comment.');
-        }
+        $this->authorize('update', $comment);
+        $updatedComment = $this->commentRepository->update($comment->id, $request->validated());
+        return $this->successResponse(new CommentResource($updatedComment), 'Comment updated successfully.');
     }
 
     public function destroy(Comment $comment)
     {
-        try {
-            $this->authorize('delete', $comment);
-            $this->commentRepository->delete($comment->id);
-            return $this->successResponse(null, 'Comment deleted successfully.', 204);
-        } catch (\Exception $exception) {
-            Log::error($exception);
-            return $this->errorResponse('Failed to delete comment.');
-        }
+        $this->authorize('delete', $comment);
+        $this->commentRepository->delete($comment->id);
+        return response()->noContent();
     }
 }

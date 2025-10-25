@@ -10,17 +10,19 @@ class BlogRepositoryEloquent extends BaseRepositoryEloquent implements BlogRepos
 {
     use FileUploadTrait;
 
+    protected array $with = ['tags', 'user'];
+
     public function __construct(Blog $model)
     {
         parent::__construct($model);
     }
 
-    public function attachTags($blog, array $tags)
+    protected function attachTags($blog, array $tags)
     {
         $blog->tags()->attach($tags);
     }
 
-    public function syncTags($blog, array $tags)
+    protected function syncTags($blog, array $tags)
     {
         $blog->tags()->sync($tags);
     }
@@ -40,6 +42,8 @@ class BlogRepositoryEloquent extends BaseRepositoryEloquent implements BlogRepos
         if ($with) {
             $relations = explode(',', $with);
             $query->with($relations);
+        } else {
+            $query->with($this->with);
         }
 
         return $query->paginate($perPage);
@@ -50,7 +54,13 @@ class BlogRepositoryEloquent extends BaseRepositoryEloquent implements BlogRepos
         if (isset($data['photo'])) {
             $data['photo'] = $this->uploadFile($data['photo'], 'blogs');
         }
-        return parent::create($data);
+        $blog = parent::create($data);
+
+        if (isset($data['tags'])) {
+            $this->attachTags($blog, $data['tags']);
+        }
+
+        return $blog->load($this->with);
     }
 
     public function update($id, array $data)
@@ -60,7 +70,13 @@ class BlogRepositoryEloquent extends BaseRepositoryEloquent implements BlogRepos
             $this->deleteFile($record->photo);
             $data['photo'] = $this->uploadFile($data['photo'], 'blogs');
         }
-        return parent::update($id, $data);
+        $blog = parent::update($id, $data);
+
+        if (isset($data['tags'])) {
+            $this->syncTags($blog, $data['tags']);
+        }
+
+        return $blog->load($this->with);
     }
 
     public function delete($id)
@@ -68,5 +84,11 @@ class BlogRepositoryEloquent extends BaseRepositoryEloquent implements BlogRepos
         $record = $this->find($id);
         $this->deleteFile($record->photo);
         return parent::delete($id);
+    }
+
+    public function with(array $with)
+    {
+        $this->with = $with;
+        return $this;
     }
 }

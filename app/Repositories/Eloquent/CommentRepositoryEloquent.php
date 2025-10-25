@@ -5,9 +5,12 @@ namespace App\Repositories\Eloquent;
 use App\Models\Blog;
 use App\Models\Comment;
 use App\Repositories\Contracts\CommentRepository;
+use Illuminate\Support\Facades\Auth;
 
 class CommentRepositoryEloquent extends BaseRepositoryEloquent implements CommentRepository
 {
+    protected array $with = ['user', 'blog'];
+
     public function __construct(Comment $model)
     {
         parent::__construct($model);
@@ -20,6 +23,8 @@ class CommentRepositoryEloquent extends BaseRepositoryEloquent implements Commen
         if ($with) {
             $relations = explode(',', $with);
             $query->with($relations);
+        } else {
+            $query->with($this->with);
         }
 
         return $query->paginate($perPage);
@@ -32,8 +37,22 @@ class CommentRepositoryEloquent extends BaseRepositoryEloquent implements Commen
         if ($with) {
             $relations = explode(',', $with);
             $query->with($relations);
+        } else {
+            $query->with($this->with);
         }
 
         return $query->paginate($perPage);
+    }
+
+    public function create(array $data)
+    {
+        $data['user_id'] = Auth::id();
+        return parent::create($data)->load($this->with);
+    }
+
+    public function with(array $with)
+    {
+        $this->with = $with;
+        return $this;
     }
 }
